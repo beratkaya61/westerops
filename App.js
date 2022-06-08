@@ -1,6 +1,19 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TouchableOpacity, Image, ScrollView, TextInput } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from 'react-native';
+
 import CheckBox from "expo-checkbox";
 import { LinearGradient } from 'expo-linear-gradient';
 import { AntDesign, MaterialIcons } from '@expo/vector-icons';
@@ -83,8 +96,20 @@ export default function App() {
   }, []);
 
   const handleCloseBottomSheet = useCallback(() => {
+
+    onChangeText('');
     bottomSheetRef.current?.close();
+
+    setTimeout(() => {
+      Keyboard.dismiss();
+    }, 300);
   }, []);
+
+  const closeBottomSheet = () => {
+    Keyboard.dismiss();
+    onChangeText('');
+    bottomSheetRef.current?.close();
+  }
 
   // callbacks
   const handleSheetChanges = useCallback((index) => {
@@ -292,61 +317,64 @@ export default function App() {
         {/* add a task bottom sheet */}
         {
           bottomSheetType === bottomSheetTypes.addTask.type && (
-            <>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+
               {/* bottom sheet header container */}
-              <>
-                {/* bottom sheet title */}
+              {/* bottom sheet title */}
+              <View style={{
+                width: '100%',
+                flexDirection: 'row',
+                alignItems: 'center',
+                padding: 10,
+              }}>
+
                 <View style={{
-                  width: '100%',
                   flexDirection: 'row',
                   alignItems: 'center',
-                  padding: 10,
+                  justifyContent: 'center',
+                  marginLeft: '35%',
                 }}>
-
-                  <View style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginLeft: '35%',
+                  <Image source={require('./assets/stroke-vector.png')} style={{
+                    height: 15,
+                    width: 15,
+                    marginRight: 10,
+                    tintColor: '#FF7964'
+                  }} />
+                  <Text style={{
+                    color: "#FF7964",
+                    fontStyle: 'normal',
+                    fontWeight: '600',
+                    fontSize: 18,
+                    lineHeight: 22,
+                    textAlign: 'center',
+                    letterSpacing: 0.5,
+                    //   font- family: 'Inter';
                   }}>
-                    <Image source={require('./assets/stroke-vector.png')} style={{
-                      height: 15,
-                      width: 15,
-                      marginRight: 10,
-                      tintColor: '#FF7964'
-                    }} />
-                    <Text style={{
-                      color: "#FF7964",
-                      fontStyle: 'normal',
-                      fontWeight: '600',
-                      fontSize: 18,
-                      lineHeight: 22,
-                      textAlign: 'center',
-                      letterSpacing: 0.5,
-                      //   font- family: 'Inter';
-                    }}>
-                      Add a task
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    style={{
-                      marginHorizontal: 90,
-                    }} onPress={() => handleCloseBottomSheet()}>
-                    <AntDesign name="close" size={20} color="#010A1B" />
-                  </TouchableOpacity>
+                    Add a task
+                  </Text>
                 </View>
 
-                {/* bottom sheet header bottom border */}
-                <View style={{ ...styles.pinnedItemBottomBorderLine, width: '100%' }} />
-              </>
+                <TouchableWithoutFeedback
+                  onPress={() => handleCloseBottomSheet()}
+                  style={{
+                    marginHorizontal: 90,
+                  }}
+                >
+                  <AntDesign name="close" size={20} color="#010A1B" />
+                </TouchableWithoutFeedback>
+              </View>
+
+              {/* bottom sheet header bottom border */}
+              <View style={{ ...styles.pinnedItemBottomBorderLine, width: '100%' }} />
 
               {/* bottom sheet body */}
-              <View style={{
-                padding: 40,
-                justifyContent: 'center',
-                alignItems: 'center'
-              }}>
+              <View
+                style={{
+                  padding: 40,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}>
                 <TextInput
                   style={styles.textInputStyle}
                   onChangeText={onChangeText}
@@ -384,7 +412,7 @@ export default function App() {
                   onPress={() => handleCloseBottomSheet()}
                   style={{
                     position: 'absolute',
-                    bottom: -250,
+                    bottom: -150,
                     alignItems: 'center',
                     backgroundColor: '#21A7F9',
                     padding: 20,
@@ -409,7 +437,7 @@ export default function App() {
                   onPress={() => handleCloseBottomSheet()}
                   style={{
                     position: 'absolute',
-                    bottom: -350,
+                    bottom: -200,
                     alignItems: 'center',
                     width: '100%',
                   }}>
@@ -424,14 +452,12 @@ export default function App() {
                       // font-family: 'Inter';               
                     }}>Cancel</Text>
                 </TouchableOpacity>
-
               </View>
-            </>
+            </KeyboardAvoidingView>
           )
         }
 
         {/* threeDots bottom sheet */}
-
         {
           bottomSheetType === bottomSheetTypes.threeDots.type && (
             <View style={{
