@@ -357,11 +357,11 @@ export default function App() {
 
                 <TouchableWithoutFeedback
                   onPress={() => handleCloseBottomSheet()}
-                  style={{
-                    marginHorizontal: 90,
-                  }}
                 >
-                  <AntDesign name="close" size={20} color="#010A1B" />
+                  <AntDesign
+                    style={{
+                      marginLeft: 90,
+                    }} name="close" size={20} color="#010A1B" />
                 </TouchableWithoutFeedback>
               </View>
 
