@@ -1,9 +1,13 @@
-import react, { useState } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Image, ScrollView, TextInput } from 'react-native';
 import CheckBox from "expo-checkbox";
 import { LinearGradient } from 'expo-linear-gradient';
-import { AntDesign } from '@expo/vector-icons';
+import { AntDesign, MaterialIcons } from '@expo/vector-icons';
+
+import BottomSheet from '@gorhom/bottom-sheet';
+import { RadioButton } from 'react-native-paper';
+
 
 
 const pinnedItemList = [
@@ -53,7 +57,39 @@ const todoItemList = [
 
 export default function App() {
 
+  const bottomSheetTypes = {
+    addTask: {
+      title: 'Add a Task',
+      type: 1
+    },
+    threeDots: {
+      type: 2
+    }
+  }
+
   const [agree, setAgree] = useState(false);
+  const [text, onChangeText] = useState('');
+  const [checked, setChecked] = useState(false);
+  const [bottomSheetType, setBottomSheetType] = useState(bottomSheetTypes.addTask.type);
+
+  const bottomSheetRef = useRef(null);
+
+  // variables
+  const snapPoints = useMemo(() => ['30%', '50%', '78%'], []);
+
+  const handleOpenBottomSheet = useCallback((index, type) => {
+    setBottomSheetType(type);
+    bottomSheetRef.current?.snapToIndex(index);
+  }, []);
+
+  const handleCloseBottomSheet = useCallback(() => {
+    bottomSheetRef.current?.close();
+  }, []);
+
+  // callbacks
+  const handleSheetChanges = useCallback((index) => {
+    console.log('handleSheetChanges', index);
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -77,7 +113,7 @@ export default function App() {
       }}>
         <Image source={require('./assets/logo.png')}
           style={{
-            resizeMode:'contain',
+            resizeMode: 'contain',
             height: '100%',
             width: '100%',
           }} />
@@ -137,7 +173,9 @@ export default function App() {
                     <Text style={styles.pinnedItemText}>{item.name}</Text>
                   </View>
 
-                  <TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleOpenBottomSheet(0, bottomSheetTypes.threeDots.type)}
+                  >
                     <Text style={styles.pinnedItemThreeDots}>
                       ...
                     </Text>
@@ -172,7 +210,9 @@ export default function App() {
                   <Text style={styles.pinnedItemText}>{item.name}</Text>
                 </View>
 
-                <TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleOpenBottomSheet(0, bottomSheetTypes.threeDots.type)}
+                >
                   <Text style={styles.pinnedItemThreeDots}>
                     ...
                   </Text>
@@ -184,17 +224,19 @@ export default function App() {
         </ScrollView>
 
         {/* add task button */}
-        <TouchableOpacity style={{
-          margin: 20,
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          backgroundColor: '#21A7F9',
-          padding: 20,
-          width: '90%',
-          height: 60,
-          borderRadius: 4
-        }}>
+        <TouchableOpacity
+          onPress={() => handleOpenBottomSheet(2, bottomSheetTypes.addTask.type)}
+          style={{
+            margin: 20,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            backgroundColor: '#21A7F9',
+            padding: 20,
+            width: '90%',
+            height: 60,
+            borderRadius: 4
+          }}>
           {/* text and icon */}
           <View style={{
             flexDirection: 'row',
@@ -224,9 +266,228 @@ export default function App() {
           <AntDesign name="arrowright" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
+
+      <BottomSheet
+        ref={bottomSheetRef}
+        enablePanDownToClose={true}
+        index={-1}
+        snapPoints={snapPoints}
+        onChange={handleSheetChanges}
+        style={{
+          shadowColor: "#000",
+          shadowOffset: {
+            width: 0,
+            height: 12,
+          },
+          shadowOpacity: 0.58,
+          shadowRadius: 16.00,
+
+          elevation: 24,
+        }}
+        backgroundStyle={{
+          backgroundColor: '#FFFFFF'
+        }}
+      >
+
+        {/* add a task bottom sheet */}
+        {
+          bottomSheetType === bottomSheetTypes.addTask.type && (
+            <>
+              {/* bottom sheet header container */}
+              <>
+                {/* bottom sheet title */}
+                <View style={{
+                  width: '100%',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  padding: 10,
+                }}>
+
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginLeft: '35%',
+                  }}>
+                    <Image source={require('./assets/stroke-vector.png')} style={{
+                      height: 15,
+                      width: 15,
+                      marginRight: 10,
+                      tintColor: '#FF7964'
+                    }} />
+                    <Text style={{
+                      color: "#FF7964",
+                      fontStyle: 'normal',
+                      fontWeight: '600',
+                      fontSize: 18,
+                      lineHeight: 22,
+                      textAlign: 'center',
+                      letterSpacing: 0.5,
+                      //   font- family: 'Inter';
+                    }}>
+                      Add a task
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={{
+                      marginHorizontal: 90,
+                    }} onPress={() => handleCloseBottomSheet()}>
+                    <AntDesign name="close" size={20} color="#010A1B" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* bottom sheet header bottom border */}
+                <View style={{ ...styles.pinnedItemBottomBorderLine, width: '100%' }} />
+              </>
+
+              {/* bottom sheet body */}
+              <View style={{
+                padding: 40,
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <TextInput
+                  style={styles.textInputStyle}
+                  onChangeText={onChangeText}
+                  value={text}
+                  placeholder="Task Description"
+                //keyboardType="numeric"
+                />
+
+                {/* pin field container */}
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginTop: 30,
+                  paddingHorizontal: 20,
+                  width: '100%',
+                }}>
+                  <View style={styles.pinnedFieldContainer}>
+                    <AntDesign name="pushpino" size={24} color="#FF7964" />
+                    <Text style={{ ...styles.pinnedFieldText, color: '#010A1B' }}>Pin on the top</Text>
+                  </View>
+
+                  <RadioButton
+                    value={checked}
+                    status={checked === true ? 'checked' : 'unchecked'}
+                    onPress={() => {
+                      setChecked(!checked)
+                      console.log('checked nedir ', checked)
+                    }}
+                  />
+                </View>
+
+                {/* bottom sheet save button */}
+                <TouchableOpacity
+                  onPress={() => handleCloseBottomSheet()}
+                  style={{
+                    position: 'absolute',
+                    bottom: -250,
+                    alignItems: 'center',
+                    backgroundColor: '#21A7F9',
+                    padding: 20,
+                    width: '90%',
+                    height: 60,
+                    borderRadius: 4
+                  }}>
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      fontSize: 18,
+                      fontWeight: '400',
+                      lineHeight: 22,
+                      letterSpacing: 0.5,
+                      textAlign: 'center',
+                      // font-family: 'Inter';               
+                    }}>Save</Text>
+                </TouchableOpacity>
+
+                {/* bottom sheet cancel button */}
+                <TouchableOpacity
+                  onPress={() => handleCloseBottomSheet()}
+                  style={{
+                    position: 'absolute',
+                    bottom: -350,
+                    alignItems: 'center',
+                    width: '100%',
+                  }}>
+                  <Text
+                    style={{
+                      color: "#21A7F9",
+                      fontSize: 18,
+                      fontWeight: '400',
+                      lineHeight: 22,
+                      letterSpacing: 0.5,
+                      textAlign: 'center',
+                      // font-family: 'Inter';               
+                    }}>Cancel</Text>
+                </TouchableOpacity>
+
+              </View>
+            </>
+          )
+        }
+
+        {/* threeDots bottom sheet */}
+
+        {
+          bottomSheetType === bottomSheetTypes.threeDots.type && (
+            <View style={{
+              width: '100%',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+
+              {/* pin on the top button */}
+              <TouchableOpacity
+                onPress={() => handleCloseBottomSheet()}
+                style={{
+                  flexDirection: 'row',
+                  marginVertical: 20,
+                }}>
+                <AntDesign name="pushpino" size={24} color="#010A1B" />
+                <Text style={{ ...styles.pinnedFieldText, color: '#010A1B' }}>Pin on the top</Text>
+              </TouchableOpacity>
+
+              {/* border line */}
+              <View style={{ ...styles.pinnedItemBottomBorderLine, width: '100%' }} />
+
+              {/* update button */}
+              <TouchableOpacity
+                onPress={() => handleCloseBottomSheet()}
+                style={{
+                  flexDirection: 'row',
+                  marginVertical: 20,
+                }}>
+                <MaterialIcons name="published-with-changes" size={24} color="#010A1B" />
+                <Text style={{ ...styles.pinnedFieldText, color: '#010A1B' }}>Update</Text>
+              </TouchableOpacity>
+
+              {/* border line */}
+              <View style={{ ...styles.pinnedItemBottomBorderLine, width: '100%' }} />
+
+              {/* delete button */}
+              <TouchableOpacity
+                onPress={() => handleCloseBottomSheet()}
+                style={{
+                  flexDirection: 'row',
+                  marginVertical: 20,
+                }}>
+                <AntDesign name="delete" size={24} color="#010A1B" />
+                <Text style={{ ...styles.pinnedFieldText, color: '#010A1B' }}>Delete</Text>
+              </TouchableOpacity>
+
+            </View>
+          )
+        }
+
+      </BottomSheet>
     </View >
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -234,6 +495,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#194591',
+  },
+  textInputStyle: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#999C9F',
+    padding: 10,
+    borderRadius: 4,
   },
   background: {
     position: 'absolute',
