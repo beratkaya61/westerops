@@ -136,7 +136,7 @@ export default function App() {
         width: 343,
         height: 100,
       }}>
-        <Image source={require('./assets/logo.png')}
+        <Image source={require('./assets/logo2.png')}
           style={{
             resizeMode: 'contain',
             height: '100%',
