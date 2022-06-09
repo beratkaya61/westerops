@@ -306,7 +306,6 @@ export default function App() {
   }
 
 
-
   //it is used only transfer todo list to pinned list
   const pinOnTheTop = () => {
 
@@ -346,6 +345,15 @@ export default function App() {
     //setAsyncStorageLock(true)
     //setPinnedList(array);
   };
+
+  const isItemExistInPinnedList = () => {
+    const isExist = pinnedList.find(item => JSON.parse(item).id === JSON.parse(bottomSheetData).id);
+
+    if (isExist)
+      setChecked(true)
+    else
+      setChecked(false)
+  }
 
 
   const getFromAsync = async () => {
@@ -769,6 +777,10 @@ export default function App() {
                   onPress={() => {
                     handleCloseBottomSheet()
                     onChangeText(JSON.parse(bottomSheetData).name)
+
+                    //if item exist in pinned list, then checked true
+                    isItemExistInPinnedList()
+
                     handleOpenBottomSheet(3, { type: bottomSheetTypes.updateTask.type, title: bottomSheetTypes.updateTask.title })
                   }}
                   style={{
