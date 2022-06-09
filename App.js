@@ -60,6 +60,8 @@ export default function App() {
   const [pinnedList, setPinnedList] = useState([]);
   const [todoList, setTodoList] = useState([]);
 
+  const [tempPinnedList, setTempPinnedList] = useState([]);
+
   const [isPinned, setPinned] = useState(false);
 
   const bottomSheetRef = useRef(null);
@@ -165,7 +167,7 @@ export default function App() {
     }
   };
 
-  
+
 
   // PINNED LIST OPERATIONS
   const addPinned = async (item) => {
@@ -362,14 +364,18 @@ export default function App() {
 
       if (id === pinnedItemData.id) {
         const updated = { ...pinnedItemData, isChecked: !pinnedItemData.isChecked };
-        return updated
+
+        return JSON.stringify(updated)
       }
 
-      return pinnedItemData;
+      return JSON.stringify(pinnedItemData);
     });
 
-    //setAsyncStorageLock(true)
-    //setPinnedList(array);
+    const tempList=[]
+    tempList.push(...tempPinnedItems);
+    
+    setAsyncStorageLock(false)
+    setPinnedList(tempList);
   };
 
   const isItemExistInPinnedList = () => {
@@ -443,6 +449,7 @@ export default function App() {
                 <AntDesign name="pushpino" size={24} color="#FF7964" />
                 <Text style={styles.pinnedFieldText}>Pin on the top</Text>
               </View>
+
               {pinnedList.map((item) => {
                 const pinnedItem = JSON.parse(item);
                 return (
