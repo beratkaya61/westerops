@@ -118,8 +118,9 @@ export default function App() {
     //console.log('handleSheetChanges', index);
   }, []);
 
-  // TODO LIST OPERATIONS
 
+
+  // TODO LIST OPERATIONS
   const addTODO = async (item) => {
 
     console.log('addTODO : ', item);
@@ -156,16 +157,15 @@ export default function App() {
   const getAllTODOListFromAsyncStorage = async () => {
     try {
       const todos = await AsyncStorage.getItem(ASYNC_STORAGE_TODO_LIST_KEY);
-      //console.log('getAllTODOListFromAsyncStorage : ', todos);
       if (todos != null) {
         setTodoList(JSON.parse(todos));
-        //console.log('get All TODO List From AsyncStorage : ', JSON.parse(todos));
       }
     } catch (error) {
       console.log(error);
     }
   };
 
+  
 
   // PINNED LIST OPERATIONS
   const addPinned = async (item) => {
@@ -195,10 +195,9 @@ export default function App() {
   const getAllPinnedListFromAsyncStorage = async () => {
     try {
       const pinnedItem = await AsyncStorage.getItem(ASYNC_STORAGE_PINNED_LIST_KEY);
-      //console.log('getAllPinnedListFromAsyncStorage : ', pinnedItem);
+
       if (pinnedItem != null) {
         setPinnedList(JSON.parse(pinnedItem));
-        //console.log('get All Pinned List From AsyncStorage : ', JSON.parse(pinnedItem));
       }
     } catch (error) {
       console.log(error);
@@ -215,6 +214,7 @@ export default function App() {
       console.log('Error while saving todo list data : ', error);
     }
   };
+
 
 
   const deleteItem = () => {
@@ -246,7 +246,7 @@ export default function App() {
         if (JSON.parse(item).id === data.id) {
           return JSON.stringify({
             ...JSON.parse(item),
-            name: text
+            name: text,
           });
         }
         return item;
@@ -267,6 +267,7 @@ export default function App() {
         const newPinnedItem = {
           id: data.id,
           name: text,
+          isChecked: data.isChecked
         };
 
         setPinnedList([...pinnedList, JSON.stringify(newPinnedItem)]);
@@ -284,7 +285,7 @@ export default function App() {
     }
     else {
       //UPDATE ITEM FROM PINNED LIST
-      const newPinnedList = pinnedList.map(item => {
+      const updatedPinnedList = pinnedList.map(item => {
         if (JSON.parse(item).id === data.id) {
           return JSON.stringify({
             ...JSON.parse(item),
@@ -295,16 +296,40 @@ export default function App() {
       }
       );
 
+      if (!checked) {
+
+        //pinned list de bulunan item todo liste ekleniyor
+        //transfer pinned list to todo list
+        const newPinnedList = pinnedList.filter(item => JSON.parse(item).id !== data.id);
+
+        //this remove lock to save data to async storage
+        setAsyncStorageLock(false);
+
+        setPinnedList(newPinnedList);
+
+        const newTodoItem = {
+          id: data.id,
+          name: text,
+          isChecked: data.isChecked
+        };
+
+        setTodoList([...todoList, JSON.stringify(newTodoItem)]);
+
+        handleCloseBottomSheet();
+        onChangeText('');
+
+        return;
+      }
+
       //this remove lock to save data to async storage
       setAsyncStorageLock(false);
 
-      setPinnedList(newPinnedList);
+      setPinnedList(updatedPinnedList);
     }
 
     handleCloseBottomSheet();
     onChangeText('');
   }
-
 
   //it is used only transfer todo list to pinned list
   const pinOnTheTop = () => {
@@ -321,6 +346,7 @@ export default function App() {
     const newPinnedItem = {
       id: data.id,
       name: data.name,
+      isChecked: data.isChecked
     };
 
     setPinnedList([...pinnedList, JSON.stringify(newPinnedItem)]);
@@ -355,15 +381,6 @@ export default function App() {
       setChecked(false)
   }
 
-
-  const getFromAsync = async () => {
-    try {
-      const pinned = await AsyncStorage.getItem(ASYNC_STORAGE_PINNED_LIST_KEY);
-      console.log('getAllPinendListFromAsyncStorage : ', pinned);
-    } catch (error) {
-      console.log(error);
-    }
-  }
 
   return (
     <View style={styles.container}>
@@ -511,7 +528,6 @@ export default function App() {
         {/* add task button */}
         <TouchableOpacity
           onPress={async () =>
-            //await getFromAsync()
             handleOpenBottomSheet(3, { type: bottomSheetTypes.addTask.type, title: bottomSheetTypes.addTask.title })
           }
           style={{
@@ -781,7 +797,11 @@ export default function App() {
                     //if item exist in pinned list, then checked true
                     isItemExistInPinnedList()
 
-                    handleOpenBottomSheet(3, { type: bottomSheetTypes.updateTask.type, title: bottomSheetTypes.updateTask.title })
+                    console.log('isPinned in update button : ', isPinned)
+
+                    const pinned = isPinned ? false : true
+
+                    handleOpenBottomSheet(3, { type: bottomSheetTypes.updateTask.type, title: bottomSheetTypes.updateTask.title }, pinned)
                   }}
                   style={{
                     flexDirection: 'row',
