@@ -47,6 +47,7 @@ export default function App() {
   const [checked, setChecked] = useState(false);
   const [bottomSheetType, setBottomSheetType] = useState(bottomSheetTypes.addTask.type);
   const [bottomSheetData, setBottomSheetData] = useState(null);
+  const [asyncStorageLock, setAsyncStorageLock] = useState(true);
   const [pinnedList, setPinnedList] = useState([]);
   const [todoList, setTodoList] = useState([]);
   const [isPinned, setPinned] = useState(false);
@@ -55,19 +56,19 @@ export default function App() {
 
   useEffect(() => {
 
-    if (todoList.length > 0) {
+    if (!asyncStorageLock) {
       saveTodoToUserDevice(todoList);
+      console.log('state condition after todo save to async storage : ', todoList);
     }
-    console.log('state condition after addTODO : ', todoList);
 
   }, [todoList]);
 
   useEffect(() => {
 
-    if (pinnedList.length > 0) {
+    if (!asyncStorageLock) {
       savePinnedToUserDevice(pinnedList);
     }
-    console.log('state condition after add item to pinned list : ', pinnedList);
+    console.log('state condition after pinned list save to async storage : ', pinnedList);
 
   }, [pinnedList]);
 
@@ -117,8 +118,9 @@ export default function App() {
         name: item,
       };
 
+      //this remove lock to save data to async storage
+      setAsyncStorageLock(false);
       setTodoList([...todoList, JSON.stringify(newTodo)]);
-
       handleCloseBottomSheet();
       onChangeText('');
     }
@@ -184,8 +186,10 @@ export default function App() {
         name: item,
       };
 
-      setPinnedList([...pinnedList, JSON.stringify(newPinnedItem)]);
+      //this remove lock to save data to async storage
+      setAsyncStorageLock(false);
 
+      setPinnedList([...pinnedList, JSON.stringify(newPinnedItem)]);
       handleCloseBottomSheet();
       onChangeText('');
     }
@@ -243,10 +247,14 @@ export default function App() {
     if (!isPinned) {
       //REMOVE ITEM FROM TODO LIST
       const newPinnedList = pinnedList.filter(item => JSON.parse(item).id !== data.id);
+      //this remove lock to save data to async storage
+      setAsyncStorageLock(false);
+
       setPinnedList(newPinnedList);
     } else {
       //REMOVE ITEM FROM PINNED LIST
       const newTodoList = todoList.filter(item => JSON.parse(item).id !== data.id);
+      setAsyncStorageLock(false);
       setTodoList(newTodoList);
     }
   }
@@ -257,6 +265,10 @@ export default function App() {
     const data = JSON.parse(bottomSheetData);
 
     const newTodoList = todoList.filter(item => JSON.parse(item).id !== data.id);
+
+    //this remove lock to save data to async storage
+    setAsyncStorageLock(false);
+
     setTodoList(newTodoList);
 
     const newPinnedItem = {
@@ -636,7 +648,6 @@ export default function App() {
         {/* threeDots bottom sheet */}
         {
           bottomSheetType === bottomSheetTypes.threeDots.type && (
-
             <>
               <TouchableWithoutFeedback
                 style={{
