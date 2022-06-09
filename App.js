@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
   StyleSheet,
@@ -12,7 +12,12 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  Alert,
 } from 'react-native';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import uuid from 'react-native-uuid';
 
 import CheckBox from "expo-checkbox";
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,7 +26,8 @@ import { AntDesign, MaterialIcons } from '@expo/vector-icons';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { RadioButton } from 'react-native-paper';
 
-
+const ASYNC_STORAGE_TODO_LIST_KEY = '@AsyncStorageTodoListKey';
+const ASYNC_STORAGE_PINNED_LIST_KEY = '@AsyncStoragePinnedListKey';
 
 const pinnedItemList = [
   {
@@ -68,24 +74,50 @@ const todoItemList = [
   }
 ]
 
-export default function App() {
-
-  const bottomSheetTypes = {
-    addTask: {
-      title: 'Add a Task',
-      type: 1
-    },
-    threeDots: {
-      type: 2
-    }
+const bottomSheetTypes = {
+  addTask: {
+    title: 'Add a Task',
+    type: 1
+  },
+  threeDots: {
+    type: 2
   }
+}
+
+
+export default function App() {
 
   const [agree, setAgree] = useState(false);
   const [text, onChangeText] = useState('');
   const [checked, setChecked] = useState(false);
   const [bottomSheetType, setBottomSheetType] = useState(bottomSheetTypes.addTask.type);
+  const [pinnedList, setPinnedList] = useState([]);
+  const [todoList, setTodoList] = useState([]);
 
   const bottomSheetRef = useRef(null);
+
+  useEffect(() => {
+
+    if (todoList.length > 0) {
+      saveTodoToUserDevice(todoList);
+    }
+    console.log('state condition after addTODO : ', todoList);
+
+  }, [todoList]);
+
+  useEffect(() => {
+
+    if (pinnedList.length > 0) {
+      savePinnedToUserDevice(pinnedList);
+    }
+    console.log('state condition after add item to pinned list : ', pinnedList);
+
+  }, [pinnedList]);
+
+  useEffect(() => {
+    getAllTODOListFromAsyncStorage();
+    getAllPinnedListFromAsyncStorage();
+  }, []);
 
   // variables
   const snapPoints = useMemo(() => ['30%', '50%', '78%'], []);
@@ -98,6 +130,8 @@ export default function App() {
   const handleCloseBottomSheet = useCallback(() => {
 
     onChangeText('');
+    setChecked(false)
+
     bottomSheetRef.current?.close();
 
     setTimeout(() => {
@@ -105,16 +139,155 @@ export default function App() {
     }, 300);
   }, []);
 
-  const closeBottomSheet = () => {
-    Keyboard.dismiss();
-    onChangeText('');
-    bottomSheetRef.current?.close();
-  }
-
   // callbacks
   const handleSheetChanges = useCallback((index) => {
-    console.log('handleSheetChanges', index);
+    //console.log('handleSheetChanges', index);
   }, []);
+
+  // TODO LIST OPERATIONS
+
+  const addTODO = async (item) => {
+
+    console.log('addTODO : ', item);
+
+    if (item == '') {
+      Alert.alert('Error', 'Please input todo');
+    } else {
+
+      const newTodo = {
+        id: uuid.v4(), // ⇨ '11edc52b-2918-4d71-9058-f7285e29d894'
+        name: item,
+      };
+
+      setTodoList([...todoList, JSON.stringify(newTodo)]);
+
+      handleCloseBottomSheet();
+      onChangeText('');
+    }
+
+    // const pinnedList = [];
+    // const todoList = [];
+
+    // todoList.push(item);
+
+    // const asyncObject = {
+    //   pinnedList: pinnedList,
+    //   todoList: todoList
+    // }
+
+    // try {
+    //   await AsyncStorage.setItem(
+    //     ASYNC_STORAGE_TODO_LIST_KEY,
+    //     JSON.stringify(asyncObject)
+    //   );
+    // } catch (error) {
+    //   // Error saving data
+    //   console.log('Error while saving data : ', error);
+    // }
+  };
+
+  const saveTodoToUserDevice = async todoList => {
+    try {
+      const stringifyTodoList = JSON.stringify(todoList);
+      await AsyncStorage.setItem(ASYNC_STORAGE_TODO_LIST_KEY, stringifyTodoList);
+      console.log('saveTodoToUserDevice : ', stringifyTodoList);
+    } catch (error) {
+      // Error saving data
+      console.log('Error while saving todo list data : ', error);
+    }
+  };
+
+  const getAllTODOListFromAsyncStorage = async () => {
+    try {
+      const todos = await AsyncStorage.getItem(ASYNC_STORAGE_TODO_LIST_KEY);
+      //console.log('getAllTODOListFromAsyncStorage : ', todos);
+      if (todos != null) {
+        setTodoList(JSON.parse(todos));
+        //console.log('get All TODO List From AsyncStorage : ', JSON.parse(todos));
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+
+
+  // PINNED LIST OPERATIONS
+  const addPinned = async (item) => {
+
+    console.log('add Pinned Item : ', item);
+
+    if (item == '') {
+      Alert.alert('Error', 'Please input pinned');
+    } else {
+
+      const newPinnedItem = {
+        id: uuid.v4(), // ⇨ '11edc52b-2918-4d71-9058-f7285e29d894'
+        name: item,
+      };
+
+      setPinnedList([...pinnedList, JSON.stringify(newPinnedItem)]);
+
+      handleCloseBottomSheet();
+      onChangeText('');
+    }
+
+    // const pinnedList = [];
+    // const todoList = [];
+
+    // todoList.push(item);
+
+    // const asyncObject = {
+    //   pinnedList: pinnedList,
+    //   todoList: todoList
+    // }
+
+    // try {
+    //   await AsyncStorage.setItem(
+    //     ASYNC_STORAGE_TODO_LIST_KEY,
+    //     JSON.stringify(asyncObject)
+    //   );
+    // } catch (error) {
+    //   // Error saving data
+    //   console.log('Error while saving data : ', error);
+    // }
+  };
+
+  const getAllPinnedListFromAsyncStorage = async () => {
+    try {
+      const pinnedItem = await AsyncStorage.getItem(ASYNC_STORAGE_PINNED_LIST_KEY);
+      //console.log('getAllPinnedListFromAsyncStorage : ', pinnedItem);
+      if (pinnedItem != null) {
+        setPinnedList(JSON.parse(pinnedItem));
+        //console.log('get All Pinned List From AsyncStorage : ', JSON.parse(pinnedItem));
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const savePinnedToUserDevice = async pinnedList => {
+    try {
+      const stringifyPinnedList = JSON.stringify(pinnedList);
+      await AsyncStorage.setItem(ASYNC_STORAGE_PINNED_LIST_KEY, stringifyPinnedList);
+      console.log('save Pinned İTEM To User Device : ', stringifyPinnedList);
+    } catch (error) {
+      // Error saving data
+      console.log('Error while saving todo list data : ', error);
+    }
+  };
+
+
+
+
+  const getFromAsync = async () => {
+    try {
+      const pinned = await AsyncStorage.getItem(ASYNC_STORAGE_PINNED_LIST_KEY);
+      console.log('getAllPinendListFromAsyncStorage : ', pinned);
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -168,55 +341,61 @@ export default function App() {
             marginTop: 30,
             marginLeft: 20,
           }}>
-          {/* pin field container */}
-          <View style={styles.pinnedFieldContainer}>
-            <AntDesign name="pushpino" size={24} color="#FF7964" />
-            <Text style={styles.pinnedFieldText}>Pin on the top</Text>
-          </View>
+
 
           {/* pin list */}
-          <>
-            {pinnedItemList.map((item, key) => {
-              return (
+          {pinnedList.length > 0 && (
+            <>
+              {/* pin field container */}
+              <View style={styles.pinnedFieldContainer}>
+                <AntDesign name="pushpino" size={24} color="#FF7964" />
+                <Text style={styles.pinnedFieldText}>Pin on the top</Text>
+              </View>
+              {pinnedList.map((item) => {
+                const pinnedItem = JSON.parse(item);
+                return (
+                  <View key={pinnedItem.id}
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
 
-                <View key={key} style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                }}>
+                    {/* checkbox container */}
+                    <View style={{
+                      flexDirection: "row",
+                      marginVertical: 20,
+                    }}>
+                      <CheckBox
+                        boxType="square"
+                        color='#21A7F9'
+                        value={agree}
+                        onChange={() => setAgree(!agree)}
+                      />
+                      <Text style={styles.pinnedItemText}>{pinnedItem.name}</Text>
+                    </View>
 
-                  {/* checkbox container */}
-                  <View style={{
-                    flexDirection: "row",
-                    marginVertical: 20,
-                  }}>
-                    <CheckBox
-                      boxType="square"
-                      color='#21A7F9'
-                      value={agree}
-                      onChange={() => setAgree(!agree)}
-                    />
-                    <Text style={styles.pinnedItemText}>{item.name}</Text>
+                    <TouchableOpacity
+                      onPress={() => handleOpenBottomSheet(0, bottomSheetTypes.threeDots.type)}
+                    >
+                      <Text style={styles.pinnedItemThreeDots}>
+                        ...
+                      </Text>
+                    </TouchableOpacity>
                   </View>
+                )
+              })}
 
-                  <TouchableOpacity
-                    onPress={() => handleOpenBottomSheet(0, bottomSheetTypes.threeDots.type)}
-                  >
-                    <Text style={styles.pinnedItemThreeDots}>
-                      ...
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )
-            })}
-
-            {/* pin bottom border */}
-            <View style={styles.pinnedItemBottomBorderLine} />
-          </>
+              {/* pin bottom border */}
+              <View style={styles.pinnedItemBottomBorderLine} />
+            </>
+          )}
 
           {/* todo list without pinned */}
-          {todoItemList.map((item, key) => {
+          {todoList.length > 0 && todoList.map((item) => {
+
+            const todoItem = JSON.parse(item);
             return (
-              <View key={key} style={{
+              <View key={todoItem.id} style={{
                 flexDirection: 'row',
                 justifyContent: 'space-between',
               }}>
@@ -232,7 +411,7 @@ export default function App() {
                     value={agree}
                     onChange={() => setAgree(!agree)}
                   />
-                  <Text style={styles.pinnedItemText}>{item.name}</Text>
+                  <Text style={styles.pinnedItemText}>{todoItem.name}</Text>
                 </View>
 
                 <TouchableOpacity
@@ -250,7 +429,10 @@ export default function App() {
 
         {/* add task button */}
         <TouchableOpacity
-          onPress={() => handleOpenBottomSheet(2, bottomSheetTypes.addTask.type)}
+          onPress={async () =>
+            //await getFromAsync()
+            handleOpenBottomSheet(2, bottomSheetTypes.addTask.type)
+          }
           style={{
             margin: 20,
             flexDirection: 'row',
@@ -401,15 +583,15 @@ export default function App() {
                     value={checked}
                     status={checked === true ? 'checked' : 'unchecked'}
                     onPress={() => {
-                      setChecked(!checked)
                       console.log('checked nedir ', checked)
+                      setChecked(!checked)
                     }}
                   />
                 </View>
 
                 {/* bottom sheet save button */}
                 <TouchableOpacity
-                  onPress={() => handleCloseBottomSheet()}
+                  onPress={() => { checked ? addPinned(text) : addTODO(text) }}
                   style={{
                     position: 'absolute',
                     bottom: -150,
