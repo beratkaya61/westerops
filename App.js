@@ -15,11 +15,12 @@ import {
   Alert,
 } from 'react-native';
 
+import CheckBox from 'expo-checkbox';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import uuid from 'react-native-uuid';
 
-import CheckBox from "expo-checkbox";
 import { LinearGradient } from 'expo-linear-gradient';
 import { AntDesign, MaterialIcons } from '@expo/vector-icons';
 
@@ -29,7 +30,6 @@ import { RadioButton } from 'react-native-paper';
 const ASYNC_STORAGE_TODO_LIST_KEY = '@AsyncStorageTodoListKey';
 const ASYNC_STORAGE_PINNED_LIST_KEY = '@AsyncStoragePinnedListKey';
 
-
 const bottomSheetTypes = {
   addTask: {
     title: 'Add a Task',
@@ -37,6 +37,10 @@ const bottomSheetTypes = {
   },
   threeDots: {
     type: 2
+  },
+  updateTask: {
+    title: 'Update Task',
+    type: 3
   }
 }
 
@@ -45,11 +49,17 @@ export default function App() {
   const [agree, setAgree] = useState(false);
   const [text, onChangeText] = useState('');
   const [checked, setChecked] = useState(false);
-  const [bottomSheetType, setBottomSheetType] = useState(bottomSheetTypes.addTask.type);
+  const [bottomSheetFeatures, setBottomSheetFeatures] = useState({
+    title: '',
+    type: bottomSheetTypes.addTask.type
+  });
+
   const [bottomSheetData, setBottomSheetData] = useState(null);
   const [asyncStorageLock, setAsyncStorageLock] = useState(true);
+
   const [pinnedList, setPinnedList] = useState([]);
   const [todoList, setTodoList] = useState([]);
+
   const [isPinned, setPinned] = useState(false);
 
   const bottomSheetRef = useRef(null);
@@ -80,8 +90,13 @@ export default function App() {
   // variables
   const snapPoints = useMemo(() => ['25%', '30%', '50%', '78%'], []);
 
-  const handleOpenBottomSheet = useCallback((index, type, isPinned = false) => {
-    setBottomSheetType(type);
+  const handleOpenBottomSheet = useCallback((index, feature, isPinned = false) => {
+    console.log('handleOpenBottomSheet features : ', feature);
+    setBottomSheetFeatures({
+      title: feature.title,
+      type: feature.type
+    });
+
     setPinned(isPinned);
     bottomSheetRef.current?.snapToIndex(index);
   }, []);
@@ -116,6 +131,7 @@ export default function App() {
       const newTodo = {
         id: uuid.v4(), // ⇨ '11edc52b-2918-4d71-9058-f7285e29d894'
         name: item,
+        isChecked: false
       };
 
       //this remove lock to save data to async storage
@@ -124,26 +140,6 @@ export default function App() {
       handleCloseBottomSheet();
       onChangeText('');
     }
-
-    // const pinnedList = [];
-    // const todoList = [];
-
-    // todoList.push(item);
-
-    // const asyncObject = {
-    //   pinnedList: pinnedList,
-    //   todoList: todoList
-    // }
-
-    // try {
-    //   await AsyncStorage.setItem(
-    //     ASYNC_STORAGE_TODO_LIST_KEY,
-    //     JSON.stringify(asyncObject)
-    //   );
-    // } catch (error) {
-    //   // Error saving data
-    //   console.log('Error while saving data : ', error);
-    // }
   };
 
   const saveTodoToUserDevice = async todoList => {
@@ -171,7 +167,6 @@ export default function App() {
   };
 
 
-
   // PINNED LIST OPERATIONS
   const addPinned = async (item) => {
 
@@ -182,8 +177,9 @@ export default function App() {
     } else {
 
       const newPinnedItem = {
-        id: uuid.v4(), // ⇨ '11edc52b-2918-4d71-9058-f7285e29d894'
+        id: uuid.v4(),
         name: item,
+        isChecked: false
       };
 
       //this remove lock to save data to async storage
@@ -194,25 +190,6 @@ export default function App() {
       onChangeText('');
     }
 
-    // const pinnedList = [];
-    // const todoList = [];
-
-    // todoList.push(item);
-
-    // const asyncObject = {
-    //   pinnedList: pinnedList,
-    //   todoList: todoList
-    // }
-
-    // try {
-    //   await AsyncStorage.setItem(
-    //     ASYNC_STORAGE_TODO_LIST_KEY,
-    //     JSON.stringify(asyncObject)
-    //   );
-    // } catch (error) {
-    //   // Error saving data
-    //   console.log('Error while saving data : ', error);
-    // }
   };
 
   const getAllPinnedListFromAsyncStorage = async () => {
@@ -259,6 +236,77 @@ export default function App() {
     }
   }
 
+  const updateItem = (text) => {
+
+    const data = JSON.parse(bottomSheetData);
+
+    if (!isPinned) {
+      //UPDATE ITEM FROM TODO LIST
+      const updateTodoList = todoList.map(item => {
+        if (JSON.parse(item).id === data.id) {
+          return JSON.stringify({
+            ...JSON.parse(item),
+            name: text
+          });
+        }
+        return item;
+      }
+      );
+
+      if (checked) {
+
+        //todo list de bulunan item pinned liste ekleniyor
+        //transfer todo list to pinned list
+        const newTodoList = todoList.filter(item => JSON.parse(item).id !== data.id);
+
+        //this remove lock to save data to async storage
+        setAsyncStorageLock(false);
+
+        setTodoList(newTodoList);
+
+        const newPinnedItem = {
+          id: data.id,
+          name: text,
+        };
+
+        setPinnedList([...pinnedList, JSON.stringify(newPinnedItem)]);
+
+        handleCloseBottomSheet();
+        onChangeText('');
+
+        return;
+      }
+
+      //this remove lock to save data to async storage
+      setAsyncStorageLock(false);
+
+      setTodoList(updateTodoList);
+    }
+    else {
+      //UPDATE ITEM FROM PINNED LIST
+      const newPinnedList = pinnedList.map(item => {
+        if (JSON.parse(item).id === data.id) {
+          return JSON.stringify({
+            ...JSON.parse(item),
+            name: text
+          });
+        }
+        return item;
+      }
+      );
+
+      //this remove lock to save data to async storage
+      setAsyncStorageLock(false);
+
+      setPinnedList(newPinnedList);
+    }
+
+    handleCloseBottomSheet();
+    onChangeText('');
+  }
+
+
+
   //it is used only transfer todo list to pinned list
   const pinOnTheTop = () => {
 
@@ -279,6 +327,25 @@ export default function App() {
     setPinnedList([...pinnedList, JSON.stringify(newPinnedItem)]);
   }
 
+  const checkboxHandleChange = async (id) => {
+
+    console.log('checkbox clicked : ', id);
+
+    let tempPinnedItems = pinnedList.map((pinnedItem) => {
+
+      const pinnedItemData = JSON.parse(pinnedItem);
+
+      if (id === pinnedItemData.id) {
+        const updated = { ...pinnedItemData, isChecked: !pinnedItemData.isChecked };
+        return updated
+      }
+
+      return pinnedItemData;
+    });
+
+    //setAsyncStorageLock(true)
+    //setPinnedList(array);
+  };
 
 
   const getFromAsync = async () => {
@@ -368,8 +435,8 @@ export default function App() {
                       <CheckBox
                         boxType="square"
                         color='#21A7F9'
-                        value={agree}
-                        onChange={() => setAgree(!agree)}
+                        value={pinnedItem.isChecked}
+                        onValueChange={() => checkboxHandleChange(pinnedItem.id)}
                       />
                       <Text style={styles.pinnedItemText}>{pinnedItem.name}</Text>
                     </View>
@@ -377,7 +444,7 @@ export default function App() {
                     <TouchableOpacity
                       onPress={() => {
                         setBottomSheetData(JSON.stringify(pinnedItem))
-                        handleOpenBottomSheet(0, bottomSheetTypes.threeDots.type)
+                        handleOpenBottomSheet(0, { type: bottomSheetTypes.threeDots.type })
                       }}
                     >
                       <Text style={styles.pinnedItemThreeDots}>
@@ -420,7 +487,7 @@ export default function App() {
                 <TouchableOpacity
                   onPress={() => {
                     setBottomSheetData(JSON.stringify(todoItem))
-                    handleOpenBottomSheet(1, bottomSheetTypes.threeDots.type, true)
+                    handleOpenBottomSheet(1, { type: bottomSheetTypes.threeDots.type }, true)
                   }}
                 >
                   <Text style={styles.pinnedItemThreeDots}>
@@ -437,7 +504,7 @@ export default function App() {
         <TouchableOpacity
           onPress={async () =>
             //await getFromAsync()
-            handleOpenBottomSheet(3, bottomSheetTypes.addTask.type)
+            handleOpenBottomSheet(3, { type: bottomSheetTypes.addTask.type, title: bottomSheetTypes.addTask.title })
           }
           style={{
             margin: 20,
@@ -502,9 +569,10 @@ export default function App() {
         }}
       >
 
-        {/* add a task bottom sheet */}
+        {/* add a task or update a task bottom sheet */}
         {
-          bottomSheetType === bottomSheetTypes.addTask.type && (
+          ((bottomSheetFeatures.type === bottomSheetTypes.addTask.type ||
+            bottomSheetFeatures.type === bottomSheetTypes.updateTask.type)) && (
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
@@ -539,7 +607,7 @@ export default function App() {
                     letterSpacing: 0.5,
                     //   font- family: 'Inter';
                   }}>
-                    Add a task
+                    {bottomSheetFeatures.title}
                   </Text>
                 </View>
 
@@ -568,7 +636,6 @@ export default function App() {
                   onChangeText={onChangeText}
                   value={text}
                   placeholder="Task Description"
-                //keyboardType="numeric"
                 />
 
                 {/* pin field container */}
@@ -597,7 +664,16 @@ export default function App() {
 
                 {/* bottom sheet save button */}
                 <TouchableOpacity
-                  onPress={() => { checked ? addPinned(text) : addTODO(text) }}
+                  onPress={() => {
+                    if (bottomSheetFeatures.type === bottomSheetTypes.addTask.type) {
+                      if (checked)
+                        addPinned(text)
+                      else
+                        addTODO(text)
+                    } else if (bottomSheetFeatures.type === bottomSheetTypes.updateTask.type) {
+                      updateItem(text)
+                    }
+                  }}
                   style={{
                     position: 'absolute',
                     bottom: -150,
@@ -647,7 +723,7 @@ export default function App() {
 
         {/* threeDots bottom sheet */}
         {
-          bottomSheetType === bottomSheetTypes.threeDots.type && (
+          bottomSheetFeatures.type === bottomSheetTypes.threeDots.type && (
             <>
               <TouchableWithoutFeedback
                 style={{
@@ -690,7 +766,11 @@ export default function App() {
 
                 {/* update button */}
                 <TouchableOpacity
-                  onPress={() => handleCloseBottomSheet()}
+                  onPress={() => {
+                    handleCloseBottomSheet()
+                    onChangeText(JSON.parse(bottomSheetData).name)
+                    handleOpenBottomSheet(3, { type: bottomSheetTypes.updateTask.type, title: bottomSheetTypes.updateTask.title })
+                  }}
                   style={{
                     flexDirection: 'row',
                     marginVertical: 20,
