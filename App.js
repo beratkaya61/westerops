@@ -29,50 +29,6 @@ import { RadioButton } from 'react-native-paper';
 const ASYNC_STORAGE_TODO_LIST_KEY = '@AsyncStorageTodoListKey';
 const ASYNC_STORAGE_PINNED_LIST_KEY = '@AsyncStoragePinnedListKey';
 
-const pinnedItemList = [
-  {
-    id: 1,
-    name: 'Getting an invite for Figma 1',
-  }, {
-    id: 2,
-    name: 'Getting an invite for Figma 2',
-  }, {
-    id: 3,
-    name: 'Getting an invite for Figma 3',
-  }, {
-    id: 4,
-    name: 'Getting an invite for Figma 4',
-  }, {
-    id: 5,
-    name: 'Getting an invite for Figma 5',
-  }, {
-    id: 6,
-    name: 'Getting an invite for Figma 6',
-  }
-]
-
-const todoItemList = [
-  {
-    id: 1,
-    name: '8 am meeting'
-  }, {
-    id: 2,
-    name: 'Finish visual Design'
-  }, {
-    id: 3,
-    name: 'Do research'
-  },
-  {
-    id: 4,
-    name: 'Reading About WesterOps'
-  }, {
-    id: 5,
-    name: 'Do yoga'
-  }, {
-    id: 6,
-    name: 'Do football'
-  }
-]
 
 const bottomSheetTypes = {
   addTask: {
@@ -84,15 +40,16 @@ const bottomSheetTypes = {
   }
 }
 
-
 export default function App() {
 
   const [agree, setAgree] = useState(false);
   const [text, onChangeText] = useState('');
   const [checked, setChecked] = useState(false);
   const [bottomSheetType, setBottomSheetType] = useState(bottomSheetTypes.addTask.type);
+  const [bottomSheetData, setBottomSheetData] = useState(null);
   const [pinnedList, setPinnedList] = useState([]);
   const [todoList, setTodoList] = useState([]);
+  const [isPinned, setPinned] = useState(false);
 
   const bottomSheetRef = useRef(null);
 
@@ -120,10 +77,11 @@ export default function App() {
   }, []);
 
   // variables
-  const snapPoints = useMemo(() => ['30%', '50%', '78%'], []);
+  const snapPoints = useMemo(() => ['25%', '30%', '50%', '78%'], []);
 
-  const handleOpenBottomSheet = useCallback((index, type) => {
+  const handleOpenBottomSheet = useCallback((index, type, isPinned = false) => {
     setBottomSheetType(type);
+    setPinned(isPinned);
     bottomSheetRef.current?.snapToIndex(index);
   }, []);
 
@@ -278,6 +236,37 @@ export default function App() {
   };
 
 
+  const deleteItem = () => {
+
+    const data = JSON.parse(bottomSheetData);
+
+    if (!isPinned) {
+      //REMOVE ITEM FROM TODO LIST
+      const newPinnedList = pinnedList.filter(item => JSON.parse(item).id !== data.id);
+      setPinnedList(newPinnedList);
+    } else {
+      //REMOVE ITEM FROM PINNED LIST
+      const newTodoList = todoList.filter(item => JSON.parse(item).id !== data.id);
+      setTodoList(newTodoList);
+    }
+  }
+
+  //it is used only transfer todo list to pinned list
+  const pinOnTheTop = () => {
+
+    const data = JSON.parse(bottomSheetData);
+
+    const newTodoList = todoList.filter(item => JSON.parse(item).id !== data.id);
+    setTodoList(newTodoList);
+
+    const newPinnedItem = {
+      id: data.id,
+      name: data.name,
+    };
+
+    setPinnedList([...pinnedList, JSON.stringify(newPinnedItem)]);
+  }
+
 
 
   const getFromAsync = async () => {
@@ -335,7 +324,6 @@ export default function App() {
 
         {/* pinned and normal todo list items body */}
         <ScrollView
-
           showsVerticalScrollIndicator={false}
           style={{
             marginTop: 30,
@@ -375,7 +363,10 @@ export default function App() {
                     </View>
 
                     <TouchableOpacity
-                      onPress={() => handleOpenBottomSheet(0, bottomSheetTypes.threeDots.type)}
+                      onPress={() => {
+                        setBottomSheetData(JSON.stringify(pinnedItem))
+                        handleOpenBottomSheet(0, bottomSheetTypes.threeDots.type)
+                      }}
                     >
                       <Text style={styles.pinnedItemThreeDots}>
                         ...
@@ -415,7 +406,10 @@ export default function App() {
                 </View>
 
                 <TouchableOpacity
-                  onPress={() => handleOpenBottomSheet(0, bottomSheetTypes.threeDots.type)}
+                  onPress={() => {
+                    setBottomSheetData(JSON.stringify(todoItem))
+                    handleOpenBottomSheet(1, bottomSheetTypes.threeDots.type, true)
+                  }}
                 >
                   <Text style={styles.pinnedItemThreeDots}>
                     ...
@@ -431,7 +425,7 @@ export default function App() {
         <TouchableOpacity
           onPress={async () =>
             //await getFromAsync()
-            handleOpenBottomSheet(2, bottomSheetTypes.addTask.type)
+            handleOpenBottomSheet(3, bottomSheetTypes.addTask.type)
           }
           style={{
             margin: 20,
@@ -642,55 +636,77 @@ export default function App() {
         {/* threeDots bottom sheet */}
         {
           bottomSheetType === bottomSheetTypes.threeDots.type && (
-            <View style={{
-              width: '100%',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}>
 
-              {/* pin on the top button */}
-              <TouchableOpacity
-                onPress={() => handleCloseBottomSheet()}
+            <>
+              <TouchableWithoutFeedback
                 style={{
-                  flexDirection: 'row',
-                  marginVertical: 20,
-                }}>
-                <AntDesign name="pushpino" size={24} color="#010A1B" />
-                <Text style={{ ...styles.pinnedFieldText, color: '#010A1B' }}>Pin on the top</Text>
-              </TouchableOpacity>
-
-              {/* border line */}
-              <View style={{ ...styles.pinnedItemBottomBorderLine, width: '100%' }} />
-
-              {/* update button */}
-              <TouchableOpacity
+                  width: '100%',
+                }}
                 onPress={() => handleCloseBottomSheet()}
-                style={{
-                  flexDirection: 'row',
-                  marginVertical: 20,
-                }}>
-                <MaterialIcons name="published-with-changes" size={24} color="#010A1B" />
-                <Text style={{ ...styles.pinnedFieldText, color: '#010A1B' }}>Update</Text>
-              </TouchableOpacity>
+              >
+                <AntDesign
+                  style={{
+                    marginLeft: '90%'
+                  }} name="close" size={20} color="#010A1B" />
+              </TouchableWithoutFeedback>
 
-              {/* border line */}
-              <View style={{ ...styles.pinnedItemBottomBorderLine, width: '100%' }} />
+              <View style={{
+                width: '100%',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
 
-              {/* delete button */}
-              <TouchableOpacity
-                onPress={() => handleCloseBottomSheet()}
-                style={{
-                  flexDirection: 'row',
-                  marginVertical: 20,
-                }}>
-                <AntDesign name="delete" size={24} color="#010A1B" />
-                <Text style={{ ...styles.pinnedFieldText, color: '#010A1B' }}>Delete</Text>
-              </TouchableOpacity>
+                {/* pin on the top button */}
+                {isPinned && (
+                  <>
+                    <TouchableOpacity
+                      onPress={() => {
+                        pinOnTheTop()
+                        handleCloseBottomSheet()
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        marginVertical: 20,
+                      }}>
+                      <AntDesign name="pushpino" size={24} color="#010A1B" />
+                      <Text style={{ ...styles.pinnedFieldText, color: '#010A1B' }}>Pin on the top</Text>
+                    </TouchableOpacity>
 
-            </View>
-          )
-        }
+                    {/* border line */}
+                    <View style={{ ...styles.pinnedItemBottomBorderLine, width: '100%' }} />
+                  </>
+                )}
 
+                {/* update button */}
+                <TouchableOpacity
+                  onPress={() => handleCloseBottomSheet()}
+                  style={{
+                    flexDirection: 'row',
+                    marginVertical: 20,
+                  }}>
+                  <MaterialIcons name="published-with-changes" size={24} color="#010A1B" />
+                  <Text style={{ ...styles.pinnedFieldText, color: '#010A1B' }}>Update</Text>
+                </TouchableOpacity>
+
+                {/* border line */}
+                <View style={{ ...styles.pinnedItemBottomBorderLine, width: '100%' }} />
+
+                {/* delete button */}
+                <TouchableOpacity
+                  onPress={() => {
+                    deleteItem()
+                    handleCloseBottomSheet()
+                  }}
+                  style={{
+                    flexDirection: 'row',
+                    marginVertical: 20,
+                  }}>
+                  <AntDesign name="delete" size={24} color="#010A1B" />
+                  <Text style={{ ...styles.pinnedFieldText, color: '#010A1B' }}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
       </BottomSheet>
     </View >
   );
