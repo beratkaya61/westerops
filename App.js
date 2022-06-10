@@ -565,6 +565,9 @@ export default function App() {
                       <CheckBox
                         boxType="square"
                         color='#21A7F9'
+                        style={{
+                          borderRadius: 4,
+                        }}
                         value={pinnedItem.isChecked}
                         onValueChange={() => checkboxHandleChangePinnedList(pinnedItem.id)}
                       />
@@ -608,6 +611,9 @@ export default function App() {
                   <CheckBox
                     boxType="square"
                     color='#21A7F9'
+                    style={{
+                      borderRadius: 4,
+                    }}
                     value={todoItem.isChecked}
                     onValueChange={() => checkboxHandleChangeTodoList(todoItem.id)}
                   />
@@ -781,7 +787,7 @@ export default function App() {
                     <Text style={{ ...styles.pinnedFieldText, color: '#010A1B' }}>Pin on the top</Text>
                   </View>
 
-                  <RadioButton
+                  <RadioButton.Android
                     value={checked}
                     status={checked === true ? 'checked' : 'unchecked'}
                     onPress={() => {
