@@ -26,6 +26,7 @@ import { AntDesign, MaterialIcons } from '@expo/vector-icons';
 
 import BottomSheet from '@gorhom/bottom-sheet';
 import { RadioButton } from 'react-native-paper';
+import { countCheckedCheckBoxItems } from './utils';
 
 const ASYNC_STORAGE_TODO_LIST_KEY = '@AsyncStorageTodoListKey';
 const ASYNC_STORAGE_PINNED_LIST_KEY = '@AsyncStoragePinnedListKey';
@@ -219,19 +220,117 @@ export default function App() {
 
 
 
+  //it is used only transfer todo list to pinned list
+  const pinOnTheTop = () => {
+
+    const data = JSON.parse(bottomSheetData);
+
+    const newTodoList = todoList.filter(item => JSON.parse(item).id !== data.id);
+
+    //this remove lock to save data to async storage
+    setAsyncStorageLock(false);
+
+    setTodoList(newTodoList);
+
+    const newPinnedItem = {
+      id: data.id,
+      name: data.name,
+      isChecked: data.isChecked
+    };
+
+    setPinnedList([...pinnedList, JSON.stringify(newPinnedItem)]);
+  }
+
+
+  const deleteCheckedItems = (list) => {
+
+    const remainingList = [];
+
+
+    for (let i = 0; i < list.length; i++) {
+
+      const tempList = list.filter(item => (JSON.parse(list[i]).id === JSON.parse(item).id && JSON.parse(item).isChecked !== true));
+
+      remainingList.push(...tempList);
+    }
+
+    console.log('remainingList : ', remainingList);
+
+    return remainingList;
+  }
+
+
+  //COMMON OPERATIONS
+
   const deleteItem = () => {
 
     const data = JSON.parse(bottomSheetData);
 
     if (!isPinned) {
-      //REMOVE ITEM FROM TODO LIST
+      //REMOVE ITEM FROM PINNED LIST
+
+      //console.log('countCheckedCheckBoxItems pinnedlist : ', countCheckedCheckBoxItems(pinnedList))
+
+      if (countCheckedCheckBoxItems(pinnedList).length > 1) {
+
+        Alert.alert(
+          "Delete Operation",
+          "There are multiple objects selected. Do you want to delete all ?",
+          [
+            {
+              text: "Cancel",
+              onPress: () => { },
+              style: "cancel"
+            },
+            {
+              text: "OK", onPress: () => {
+
+                const remainings = deleteCheckedItems(pinnedList);
+                setAsyncStorageLock(false);
+                setPinnedList(remainings);
+
+              }
+            }
+          ])
+
+        return;
+      }
+
+
       const newPinnedList = pinnedList.filter(item => JSON.parse(item).id !== data.id);
       //this remove lock to save data to async storage
       setAsyncStorageLock(false);
 
       setPinnedList(newPinnedList);
     } else {
-      //REMOVE ITEM FROM PINNED LIST
+      //REMOVE ITEM FROM TODO LIST
+
+      //console.log('countCheckedCheckBoxItems todoList : ', countCheckedCheckBoxItems(todoList))
+
+      if (countCheckedCheckBoxItems(todoList).length > 1) {
+
+        Alert.alert(
+          "Delete Operation",
+          "There are multiple objects selected. Do you want to delete all ?",
+          [
+            {
+              text: "Cancel",
+              onPress: () => { },
+              style: "cancel"
+            },
+            {
+              text: "OK", onPress: () => {
+
+                const remainings = deleteCheckedItems(todoList);
+                setAsyncStorageLock(false);
+                setTodoList(remainings);
+              }
+            }
+          ])
+
+        return;
+      }
+
       const newTodoList = todoList.filter(item => JSON.parse(item).id !== data.id);
       setAsyncStorageLock(false);
       setTodoList(newTodoList);
@@ -333,30 +432,7 @@ export default function App() {
     onChangeText('');
   }
 
-  //it is used only transfer todo list to pinned list
-  const pinOnTheTop = () => {
-
-    const data = JSON.parse(bottomSheetData);
-
-    const newTodoList = todoList.filter(item => JSON.parse(item).id !== data.id);
-
-    //this remove lock to save data to async storage
-    setAsyncStorageLock(false);
-
-    setTodoList(newTodoList);
-
-    const newPinnedItem = {
-      id: data.id,
-      name: data.name,
-      isChecked: data.isChecked
-    };
-
-    setPinnedList([...pinnedList, JSON.stringify(newPinnedItem)]);
-  }
-
-  const checkboxHandleChange = async (id) => {
-
-    console.log('checkbox clicked : ', id);
+  const checkboxHandleChangePinnedList = async (id) => {
 
     let tempPinnedItems = pinnedList.map((pinnedItem) => {
 
@@ -371,11 +447,33 @@ export default function App() {
       return JSON.stringify(pinnedItemData);
     });
 
-    const tempList=[]
+    const tempList = []
     tempList.push(...tempPinnedItems);
-    
+
     setAsyncStorageLock(false)
     setPinnedList(tempList);
+  };
+
+  const checkboxHandleChangeTodoList = async (id) => {
+
+    let tempTodoItems = todoList.map((todoItem) => {
+
+      const todoItemData = JSON.parse(todoItem);
+
+      if (id === todoItemData.id) {
+        const updated = { ...todoItemData, isChecked: !todoItemData.isChecked };
+
+        return JSON.stringify(updated)
+      }
+
+      return JSON.stringify(todoItemData);
+    });
+
+    const tempList = []
+    tempList.push(...tempTodoItems);
+
+    setAsyncStorageLock(false)
+    setTodoList(tempList);
   };
 
   const isItemExistInPinnedList = () => {
@@ -468,7 +566,7 @@ export default function App() {
                         boxType="square"
                         color='#21A7F9'
                         value={pinnedItem.isChecked}
-                        onValueChange={() => checkboxHandleChange(pinnedItem.id)}
+                        onValueChange={() => checkboxHandleChangePinnedList(pinnedItem.id)}
                       />
                       <Text style={styles.pinnedItemText}>{pinnedItem.name}</Text>
                     </View>
@@ -510,8 +608,8 @@ export default function App() {
                   <CheckBox
                     boxType="square"
                     color='#21A7F9'
-                    value={agree}
-                    onChange={() => setAgree(!agree)}
+                    value={todoItem.isChecked}
+                    onValueChange={() => checkboxHandleChangeTodoList(todoItem.id)}
                   />
                   <Text style={styles.pinnedItemText}>{todoItem.name}</Text>
                 </View>
